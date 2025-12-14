@@ -1,68 +1,114 @@
-# 🚀 Discord Quest Spoofer (BetterDiscord/Vencord)
+<div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.5-eb459e?style=for-the-badge)
+# 🎮 Discord Quest Spoofer
+### The Ultimate Quest Completion Tool
 
-**The most advanced and beautiful Discord Quest Completer.**
-Automatically finish **Discord Quests**, **play games**, and **watch streams** to unlock free rewards (Avatar Decorations, Nitro offers) without installing any games.
+![Version](https://img.shields.io/badge/Version-3.1.0-ff0055?style=for-the-badge)
+**Unlock Discord Quest rewards, Nitro offers, and Avatar Decorations instantly without installing any games.**
+<br>
+A powerful, beautiful, and safe plugin for **BetterDiscord** and **Vencord**.
 
-> **Note:** This plugin works on both **BetterDiscord** and **Vencord**.
+[Features](#-features) • [Installation](#-installation) • [Usage](#-how-to-use) • [Themes](#-themes) • [Download](https://github.com/RADINMNX2/DiscordQuestSpoofer/releases/latest)
+
+</div>
 
 ---
 
 ## ✨ Features
 
-*   **🎨 Modern Neon UI:** A beautiful, custom-built dashboard (Press `Ctrl+Q` to toggle).
-*   **🚀 Auto Completion:** Instantly starts "Play for 15 minutes" tasks without downloading the game.
-*   **📺 Stream Simulator:** Automatically simulates watching streams for required quests.
-*   **🎮 Real-time Feedback:** Visual progress bars and status indicators.
-*   **🔒 Safe & Local:** Works entirely within your client by injecting local state.
+This isn't just a script; it's a full-featured dashboard built for power users.
+
+*   **🎨 Stunning UI:** A custom Neon/Dark dashboard that overlays Discord (Hidden by default).
+*   **🎹 Mini-Player:** Keep track of progress while browsing other servers.
+*   **⚡ Auto-Queue:** Queue multiple quests, and it will complete them one by one automatically.
+*   **🎭 5+ Themes:** Customize the look with built-in themes (Cyberpunk, Matrix, RGB, etc.).
+*   **📺 Stream & Game Support:** Handles both "Play for 15 mins" and "Stream to a friend" quests.
+*   **🔇 Silent Mode:** Option to disable sounds and notifications.
+*   **🛡️ Safety First:** Works locally by injecting client state. No suspicious API spam.
 
 ---
 
 ## 📥 Installation
 
-### BetterDiscord
-1.  Download `DiscordQuestSpoofer.plugin.js` from the [Releases Page](https://github.com/RADINMNX2/DiscordQuestSpoofer/releases).
-2.  Open Discord Settings > **Plugins** > **Open Plugins Folder**.
-3.  Drag and drop the downloaded file into the folder.
+### 1. BetterDiscord
+1.  Download `DiscordQuestSpoofer.plugin.js` from the [**Releases Page**](https://github.com/RADINMNX2/DiscordQuestSpoofer/releases).
+2.  Open Discord **User Settings** > **Plugins** > **Open Plugins Folder**.
+3.  Drag and drop the downloaded file into that folder.
+4.  Enable the plugin in the list.
 
-### Vencord
-1.  Place the file in your Vencord user plugins directory.
-2.  Restart Discord / Reload Vencord.
+### 2. Vencord
+1.  Download `DiscordQuestSpoofer.plugin.js`.
+2.  Place the file in your Vencord user plugins directory:
+    *   **Windows:** `%AppData%\Vencord\plugins`
+    *   **Linux/Mac:** `~/.config/Vencord/plugins`
+3.  Restart Discord completely.
 
 ---
 
 ## 🎮 How to Use
 
-1.  **Accept a Quest:** Go to **User Settings** > **Gift Inventory** and accept a quest.
-2.  **Open Menu:** Press **`Ctrl + Q`** anywhere in Discord to open the overlay.
-3.  **Start Spoofing:** Click the **"REFRESH"** button on the quest card.
-4.  **Wait:** Watch the progress bar fill up. You can close the menu while it runs.
-5.  **Claim Reward:** Once it hits 100%, the button will change to "REWARD UNLOCKED".
+### The Shortcut
+The UI is hidden by default to keep your Discord clean.
+> Press **`CTRL` + `Q`** anywhere in Discord to open the dashboard.
+
+### Completing a Quest
+1.  Go to **User Settings** > **Gift Inventory** and **Accept** a quest.
+2.  Press `Ctrl + Q` to open the Spoofer Dashboard.
+3.  You will see your active quest card.
+4.  Click **"START SPOOFING"**.
+5.  Sit back! A progress bar will appear. You can close the main dashboard; a **Mini-Player** will appear at the bottom.
+
+### For "Stream to a Friend" Quests
+1.  Join a Voice Channel (you can be alone or with an alt).
+2.  Start the spoofing process from the dashboard.
+3.  Discord will think you are streaming the required game.
 
 ---
 
-## 🛠️ FAQ
+## 🎨 Themes
 
-**Q: Do I need to install the actual game?**
-A: **No!** The plugin tricks Discord into thinking the game is running locally.
+V3.1.0 introduces a powerful theming engine. Open the dashboard (`Ctrl+Q`), click the **Settings Icon**, and choose your style:
 
-**Q: Does it work for "Stream to a friend" quests?**
-A: **Yes.** Select "Stream on Desktop" in the spoofer. You just need to be in a voice channel (even alone or with an alt account) for Discord to register the stream.
-
-**Q: Is this safe?**
-A: Yes. This plugin purely modifies local client variables to simulate game activity. It does not spam the API maliciously.
+| Theme | Description |
+| :--- | :--- |
+| **Neon Red** | The default, aggressive gamer look. Dark background with red accents. |
+| **Cyberpunk** | Yellow and Cyan aesthetics inspired by Night City. |
+| **Matrix** | Digital rain green with a pure black background. |
+| **Discord Blurple** | Matches the native Discord color scheme. |
+| **RGB Gamer** | Animated rainbow gradients for the true FPS pros. |
 
 ---
 
-## 💻 Development
+## 🛠️ FAQ & Troubleshooting
 
-*   **Author:** [RADINMNX](https://github.com/RADINMNX2)
-*   **License:** MIT
+<details>
+<summary><strong>Does this require installing the game?</strong></summary>
+No! The plugin modifies your local Discord client to report that the game is running (PID Spoofing). You don't need to download anything.
+</details>
+
+<details>
+<summary><strong>I pressed Ctrl+Q but nothing happened.</strong></summary>
+1. Make sure the plugin is enabled in BetterDiscord/Vencord settings.
+2. Check if you have any other plugins conflicting with keybinds.
+3. Check the console (Ctrl+Shift+I > Console) for errors and report them.
+</details>
+
+<details>
+<summary><strong>Can I get banned?</strong></summary>
+While any modification of the Discord client is technically against TOS, this plugin is considered <strong>safe</strong> because it does not automate user actions (like spamming messages) or exploit server-side vulnerabilities. It simply tells your local client "Hey, I'm playing Minecraft" when you aren't.
+</details>
+
+<details>
+<summary><strong>It says "Modules not loaded".</strong></summary>
+Sometimes Discord updates break internal modules. Try restarting Discord (Ctrl+R). If it persists, check for a plugin update.
+</details>
+
+---
 
 <div align="center">
-  <br>
-  <a href="https://github.com/RADINMNX2/DiscordQuestSpoofer/stargazers">
-    <img src="https://img.shields.io/badge/Star%20This%20Repo-ff0055?style=for-the-badge&logo=github" alt="Star Repo">
-  </a>
+
+**Made with ❤️ by [RADINMNX](https://github.com/RADINMNX2)**
+<br>
+Don't forget to ⭐ Star the repo if you found this useful!
+
 </div>
