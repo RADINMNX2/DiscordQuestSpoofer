@@ -2,7 +2,7 @@
  * @name DiscordQuestSpoofer
  * @author RADINMNX
  * @description A powerful, modern, and beautiful tool to auto-complete Discord Quests. Supports Video, Game, and Stream tasks. Press Ctrl+Q to open the menu.
- * @version 2.4.2
+ * @version 2.0.5
  * @invite 
  * @authorLink https://github.com/RADINMNX2
  * @website https://github.com/RADINMNX2
@@ -25,7 +25,7 @@ module.exports = class DiscordQuestSpoofer {
 
     getName() { return "DiscordQuestSpoofer"; }
     getDescription() { return "A powerful tool to auto-complete Discord Quests. Press Ctrl+Q to open the menu."; }
-    getVersion() { return "2.4.2"; }
+    getVersion() { return "2.0.5"; }
     getAuthor() { return "RADINMNX"; }
 
     load() {
