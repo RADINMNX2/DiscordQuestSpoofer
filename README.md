@@ -36,7 +36,7 @@ Automatically finish **Discord Quests**, **play games**, and **watch streams** t
 
 1.  **Accept a Quest:** Go to **User Settings** > **Gift Inventory** and accept a quest.
 2.  **Open Menu:** Press **`Ctrl + Q`** anywhere in Discord to open the overlay.
-3.  **Start Spoofing:** Click the **"START SPOOFING"** button on the quest card.
+3.  **Start Spoofing:** Click the **"REFRESH"** button on the quest card.
 4.  **Wait:** Watch the progress bar fill up. You can close the menu while it runs.
 5.  **Claim Reward:** Once it hits 100%, the button will change to "REWARD UNLOCKED".
 
