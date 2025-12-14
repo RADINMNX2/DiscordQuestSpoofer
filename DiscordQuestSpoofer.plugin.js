@@ -2,7 +2,7 @@
  * @name DiscordQuestSpoofer
  * @author RADINMNX
  * @description A powerful, modern, and beautiful tool to auto-complete Discord Quests. Supports Video, Game, and Stream tasks. Press Ctrl+Q to open the menu.
- * @version 2.0.5
+ * @version 2.0.7
  * @invite 
  * @authorLink https://github.com/RADINMNX2
  * @website https://github.com/RADINMNX2
@@ -25,7 +25,7 @@ module.exports = class DiscordQuestSpoofer {
 
     getName() { return "DiscordQuestSpoofer"; }
     getDescription() { return "A powerful tool to auto-complete Discord Quests. Press Ctrl+Q to open the menu."; }
-    getVersion() { return "2.0.5"; }
+    getVersion() { return "2.0.7"; }
     getAuthor() { return "RADINMNX"; }
 
     load() {
@@ -165,8 +165,8 @@ module.exports = class DiscordQuestSpoofer {
             @keyframes dqsFadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(12px); } }
             @keyframes dqsScaleUp { from { opacity: 0; transform: scale(0.92) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             @keyframes dqsExit { to { opacity: 0; transform: scale(0.95); } }
+            @keyframes dqsRemove { to { opacity: 0; transform: translateX(50px); height: 0; margin-bottom: 0; padding: 0; } }
             @keyframes dqsShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-            @keyframes dqsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
             @keyframes dqsGridMove { 0% { background-position: 0 0; } 100% { background-position: 40px 40px; } }
             @keyframes dqsPulseSoft { 0% { box-shadow: 0 0 0 0 var(--dqs-accent-glow); } 70% { box-shadow: 0 0 0 8px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
 
@@ -186,6 +186,9 @@ module.exports = class DiscordQuestSpoofer {
             .dqs-panel {
                 width: 500px;
                 max-width: 90vw;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
                 background: var(--dqs-bg-panel);
                 border: 1px solid var(--dqs-border);
                 border-radius: 24px;
@@ -214,12 +217,21 @@ module.exports = class DiscordQuestSpoofer {
                 animation: dqsGridMove 20s linear infinite;
             }
 
-            .dqs-content { position: relative; z-index: 1; padding: 32px; }
+            .dqs-content { 
+                position: relative; 
+                z-index: 1; 
+                padding: 32px; 
+                display: flex; 
+                flex-direction: column; 
+                height: 100%; 
+                overflow: hidden; /* Important for scroll */
+            }
 
             /* Header */
             .dqs-header { 
                 display: flex; justify-content: space-between; align-items: center; 
-                margin-bottom: 32px; 
+                margin-bottom: 24px;
+                flex-shrink: 0;
             }
             .dqs-brand { display: flex; align-items: center; gap: 16px; }
             .dqs-logo-box {
@@ -258,6 +270,21 @@ module.exports = class DiscordQuestSpoofer {
             .dqs-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
             .dqs-close-btn:hover { background: #ff2a5d; color: #fff; box-shadow: 0 4px 15px rgba(255, 42, 93, 0.4); }
 
+            /* Scrollable List */
+            #dqs-list {
+                flex-grow: 1;
+                overflow-y: auto;
+                padding-right: 8px;
+                margin-right: -8px;
+                min-height: 0; /* Crucial for nested flex scroll */
+            }
+
+            /* Custom Scrollbar */
+            #dqs-list::-webkit-scrollbar { width: 6px; }
+            #dqs-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 4px; }
+            #dqs-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+            #dqs-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
             /* Cards */
             .dqs-card {
                 background: rgba(20, 20, 23, 0.6);
@@ -270,6 +297,10 @@ module.exports = class DiscordQuestSpoofer {
                 backdrop-filter: blur(10px);
                 animation: dqsScaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 opacity: 0; /* for stagger */
+            }
+            .dqs-card.dqs-removing {
+                animation: dqsRemove 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                pointer-events: none;
             }
             .dqs-card:hover { 
                 transform: translateY(-4px); 
@@ -351,37 +382,6 @@ module.exports = class DiscordQuestSpoofer {
                 background: rgba(255,255,255,0.02); border-radius: 18px; border: 1px dashed var(--dqs-border);
             }
             .dqs-empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; display: block; }
-            
-            /* Instruction Panel (The Green One) */
-            .dqs-instruction-panel {
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-                padding: 40px;
-                background: #050a07;
-                border: 1px solid rgba(0, 255, 157, 0.2);
-                border-radius: 20px;
-                box-shadow: 0 0 40px rgba(0, 255, 157, 0.05);
-                text-align: center;
-                color: #ffffff;
-                margin-top: 10px;
-                position: relative;
-                overflow: hidden;
-            }
-            .dqs-instruction-panel::before {
-                content: ''; position: absolute; inset: 0;
-                background: radial-gradient(circle at 50% -20%, rgba(0, 255, 157, 0.1), transparent 60%);
-                pointer-events: none;
-            }
-            .dqs-instruction-key {
-                font-size: 42px; font-weight: 900;
-                color: #00ff9d;
-                text-shadow: 0 0 30px rgba(0, 255, 157, 0.4);
-                background: rgba(0, 255, 157, 0.05);
-                padding: 15px 40px;
-                border-radius: 16px;
-                border: 1px solid rgba(0, 255, 157, 0.2);
-                margin: 20px 0;
-                font-family: monospace;
-            }
         `;
         if (typeof BdApi !== "undefined" && BdApi.DOM) BdApi.DOM.addStyle("DiscordQuestSpoofer", css);
     }
@@ -421,6 +421,10 @@ module.exports = class DiscordQuestSpoofer {
                     </div>
                 </div>
                 <div id="dqs-list"></div>
+                
+                <div style="font-size: 11px; color: var(--dqs-text-muted); text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--dqs-border);">
+                    Made with <span style="color: #ff0055">♥</span> by RADINMNX
+                </div>
             </div>
         `;
 
@@ -428,6 +432,10 @@ module.exports = class DiscordQuestSpoofer {
 
         const renderQuests = () => {
             const list = container.querySelector("#dqs-list");
+            
+            // Fix: Stop mouse wheel propagation to prevent background scrolling
+            list.addEventListener("wheel", (e) => e.stopPropagation());
+            
             list.innerHTML = "";
 
             if (!self.modules.QuestsStore) {
@@ -508,11 +516,21 @@ module.exports = class DiscordQuestSpoofer {
                 if (!isCompleted) {
                     btn.onclick = () => {
                         if (self.activeSpoofs.has(quest.id)) {
+                            // Stop logic
                             self.stopSpoof(quest.id);
                             btn.textContent = "START SPOOFING";
                             btn.classList.remove("active");
                             card.querySelector('.dqs-badge').textContent = 'READY';
                         } else {
+                            // Start logic - Concurrency Check
+                            if (self.activeSpoofs.size > 0) {
+                                self.log("Only one quest can be spoofed at a time! Finish the current one first.", "error");
+                                const originalText = btn.textContent;
+                                btn.textContent = "BUSY!";
+                                setTimeout(() => btn.textContent = originalText, 1000);
+                                return;
+                            }
+
                             btn.textContent = "SPOOFING ACTIVE...";
                             btn.classList.add("active");
                             card.querySelector('.dqs-badge').textContent = 'RUNNING';
@@ -528,13 +546,25 @@ module.exports = class DiscordQuestSpoofer {
                                 if(per) per.textContent = `${p}%`;
                                 
                                 if (done) {
-                                    btn.textContent = "REWARD UNLOCKED";
+                                    btn.textContent = "QUEST COMPLETED";
                                     btn.className = "dqs-btn success";
                                     btn.disabled = true;
                                     card.classList.add("completed");
                                     card.querySelector('.dqs-badge').textContent = 'COMPLETED';
                                     self.stopSpoof(quest.id);
                                     self.log(`Quest ${appName} completed!`, "success");
+                                    
+                                    // Remove animation logic
+                                    setTimeout(() => {
+                                        card.classList.add("dqs-removing");
+                                        setTimeout(() => {
+                                            card.remove();
+                                            // Check if list empty
+                                            if (list.children.length === 0) {
+                                                list.innerHTML = `<div class="dqs-empty"><span class="dqs-empty-icon">🎉</span>All quests completed!</div>`;
+                                            }
+                                        }, 400); // match css animation duration
+                                    }, 1000); // wait 1s before removing
                                 }
                             });
                         }
