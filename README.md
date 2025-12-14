@@ -1,8 +1,8 @@
 # 🚀 Discord Quest Spoofer & Auto Completer (BetterDiscord/Vencord)
 
 ![Version](https://img.shields.io/badge/version-2.0.5-blue?style=for-the-badge)
-![Downloads](https://img.shields.io/github/downloads/RADINMNX2/DiscordQuestSpoofer/total?style=for-the-badge&color=green)
-![Author](https://img.shields.io/badge/author-RADINMNX-red?style=for-the-badge)
+![Stars](https://img.shields.io/github/stars/RADINMNX2/DiscordQuestSpoofer?style=for-the-badge&color=yellow)
+![Repo Size](https://img.shields.io/github/repo-size/RADINMNX2/DiscordQuestSpoofer?style=for-the-badge&color=orange)
 
 **The ultimate Discord Quest Completer.**
 Automatically finish **Discord Quests**, **play games**, and **watch streams** to unlock free rewards (Avatar Decorations, Nitro offers, etc.) without actually installing the games.
