@@ -4,9 +4,9 @@
  * @description A powerful, modern, and beautiful tool to auto-complete Discord Quests. Supports Video, Game, and Stream tasks with a neon aesthetic dashboard.
  * @version 2.0.5
  * @invite 
- * @authorLink https://github.com/RADINMNX
- * @website https://github.com/RADINMNX
- * @source https://github.com/RADINMNX/DiscordQuestSpoofer
+ * @authorLink https://github.com/RADINMNX2
+ * @website https://github.com/RADINMNX2
+ * @source https://github.com/RADINMNX2/DiscordQuestSpoofer
  */
 
 module.exports = class DiscordQuestSpoofer {
