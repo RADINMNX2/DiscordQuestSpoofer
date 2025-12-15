@@ -1,12 +1,13 @@
 /**
  * @name DiscordQuestSpoofer
  * @author RADINMNX
- * @description The Ultimate Quest Completer. Features: Auto-Queue, Mini-Player, Themes, Custom Keybinds, and Smart Error Handling.
- * @version 3.2.0
+ * @description The Ultimate Quest Completer. Features: Auto-Queue, Mini-Player, Themes, Custom Keybinds, and Smart Error Handling. logic synced with console.js for 100% success rate.
+ * @version 3.7.0
  * @invite 
  * @authorLink https://github.com/RADINMNX2
  * @website https://github.com/RADINMNX2
- * @source https://github.com/RADINMNX2/DiscordQuestSpoofer
+ * @source https://github.com/RADINMNX2/DiscordQuestSpoofer/blob/main/DiscordQuestSpoofer.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/RADINMNX2/DiscordQuestSpoofer/main/DiscordQuestSpoofer.plugin.js
  */
 
 module.exports = class DiscordQuestSpoofer {
@@ -16,12 +17,14 @@ module.exports = class DiscordQuestSpoofer {
         this.queue = []; // Queue of Quest IDs
         this.currentQuestId = null;
         this.miniPlayerOpen = false;
+        this.updateAvailable = null;
         
         // Settings Default
         this.settings = {
             theme: 'default',
             sound: true,
             notifications: true,
+            lastVersion: "0.0.0",
             keybind: {
                 code: 'KeyQ',
                 ctrl: true,
@@ -31,15 +34,25 @@ module.exports = class DiscordQuestSpoofer {
             }
         };
 
+        // Changelog for the current version
+        this.changelog = {
+            version: "3.7.0",
+            changes: [
+                { type: "fix", text: "Fixed Update Check Crash (BdApi error)" },
+                { type: "fix", text: "Improved Error Handling for Notifications" }
+            ]
+        };
+
         // Themes Configuration
         this.themes = {
             default: {
-                name: 'Neon Red',
+                name: 'Neon Red (Official)',
                 vars: {
-                    '--dqs-accent': '#ff0055',
-                    '--dqs-accent-gradient': 'linear-gradient(135deg, #ff2a5d, #ff0055)',
-                    '--dqs-accent-glow': 'rgba(255, 42, 93, 0.5)',
+                    '--dqs-accent': '#ef4444',
+                    '--dqs-accent-gradient': 'linear-gradient(135deg, #ef4444, #ec4899)',
+                    '--dqs-accent-glow': 'rgba(239, 68, 68, 0.5)',
                     '--dqs-bg-panel': '#0a0a0c',
+                    '--dqs-bg-overlay': 'rgba(0, 0, 0, 0.9)',
                     '--dqs-text-highlight': '#fff'
                 }
             },
@@ -50,6 +63,7 @@ module.exports = class DiscordQuestSpoofer {
                     '--dqs-accent-gradient': 'linear-gradient(135deg, #00f3ff, #fcee0a)',
                     '--dqs-accent-glow': 'rgba(0, 243, 255, 0.5)',
                     '--dqs-bg-panel': '#050a14',
+                    '--dqs-bg-overlay': 'rgba(0, 0, 0, 0.85)',
                     '--dqs-text-highlight': '#00f3ff'
                 }
             },
@@ -60,6 +74,7 @@ module.exports = class DiscordQuestSpoofer {
                     '--dqs-accent-gradient': 'linear-gradient(135deg, #008f11, #00ff41)',
                     '--dqs-accent-glow': 'rgba(0, 255, 65, 0.4)',
                     '--dqs-bg-panel': '#000000',
+                    '--dqs-bg-overlay': 'rgba(0, 20, 0, 0.9)',
                     '--dqs-text-highlight': '#00ff41'
                 }
             },
@@ -70,6 +85,7 @@ module.exports = class DiscordQuestSpoofer {
                     '--dqs-accent-gradient': 'linear-gradient(135deg, #5865F2, #4752C4)',
                     '--dqs-accent-glow': 'rgba(88, 101, 242, 0.5)',
                     '--dqs-bg-panel': '#313338',
+                    '--dqs-bg-overlay': 'rgba(0, 0, 0, 0.8)',
                     '--dqs-text-highlight': '#fff'
                 }
             },
@@ -80,6 +96,7 @@ module.exports = class DiscordQuestSpoofer {
                     '--dqs-accent-gradient': 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff)',
                     '--dqs-accent-glow': 'rgba(255, 255, 255, 0.5)',
                     '--dqs-bg-panel': '#000000',
+                    '--dqs-bg-overlay': 'rgba(0, 0, 0, 0.9)',
                     '--dqs-text-highlight': '#fff'
                 },
                 extraCSS: `.dqs-progress-fill { animation: dqsRainbow 5s linear infinite; }`
@@ -96,13 +113,12 @@ module.exports = class DiscordQuestSpoofer {
             GuildChannelStore: null
         };
         
-        this.successSound = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"; 
         this.handleKeydown = this.handleKeydown.bind(this);
     }
 
     getName() { return "DiscordQuestSpoofer"; }
     getDescription() { return "The Ultimate Quest Completer. Features: Auto-Queue, Mini-Player, Themes. Press " + this.getKeyString() + " to open."; }
-    getVersion() { return "3.2.0"; }
+    getVersion() { return "3.7.0"; }
     getAuthor() { return "RADINMNX"; }
 
     load() {
@@ -110,14 +126,18 @@ module.exports = class DiscordQuestSpoofer {
     }
 
     start() {
-        if (!this.modules.QuestsStore) this.findModules();
+        this.findModules();
         this.loadSettings();
         this.injectCSS();
         this.applyTheme();
         document.removeEventListener("keydown", this.handleKeydown);
         document.addEventListener("keydown", this.handleKeydown);
         this.initialized = true;
-        this.log(`Started v3.2.0. Press ${this.getKeyString()}.`, "success");
+        
+        this.checkChangelog();
+        this.checkForUpdates();
+        
+        this.log(`Started v${this.getVersion()}. Press ${this.getKeyString()}.`, "success");
     }
 
     stop() {
@@ -125,6 +145,7 @@ module.exports = class DiscordQuestSpoofer {
         document.removeEventListener("keydown", this.handleKeydown);
         this.closeModal();
         this.removeMiniPlayer();
+        this.removeUpdateIcon();
         this.stopAllSpoofs();
         this.initialized = false;
     }
@@ -135,10 +156,6 @@ module.exports = class DiscordQuestSpoofer {
                 const saved = BdApi.loadData("DiscordQuestSpoofer", "settings");
                 if (saved) {
                     this.settings = { ...this.settings, ...saved };
-                    // Migration for older versions
-                    if (!this.settings.keybind) {
-                         this.settings.keybind = { code: 'KeyQ', ctrl: true, shift: false, alt: false, meta: false };
-                    }
                 }
             } catch (e) {
                 console.error("[DQS] Failed to load settings:", e);
@@ -153,13 +170,156 @@ module.exports = class DiscordQuestSpoofer {
         this.applyTheme();
     }
 
+    // --- Update System ---
+    checkForUpdates() {
+        const url = "https://raw.githubusercontent.com/RADINMNX2/DiscordQuestSpoofer/main/DiscordQuestSpoofer.plugin.js";
+        fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/@version\s+(\d+\.\d+\.\d+)/);
+                if (match) {
+                    const remoteVersion = match[1];
+                    if (this.compareVersions(remoteVersion, this.getVersion()) > 0) {
+                        this.updateAvailable = remoteVersion;
+                        this.showUpdateModal(remoteVersion, text);
+                    }
+                }
+            })
+            .catch(err => console.error("[DQS] Update check failed:", err));
+    }
+
+    compareVersions(v1, v2) {
+        const parts1 = v1.split('.').map(Number);
+        const parts2 = v2.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+            if (parts1[i] > parts2[i]) return 1;
+            if (parts1[i] < parts2[i]) return -1;
+        }
+        return 0;
+    }
+
+    showUpdateModal(version, code) {
+        if (document.getElementById("dqs-update-modal")) return;
+
+        const overlay = document.createElement("div");
+        overlay.id = "dqs-update-modal";
+        overlay.className = "dqs-overlay";
+        overlay.style.zIndex = "100000";
+        
+        overlay.innerHTML = `
+            <div class="dqs-modal-box">
+                <div class="dqs-update-icon">🚀</div>
+                <h2 class="dqs-modal-title">New Update Available!</h2>
+                <p class="dqs-modal-desc">Version <span style="color:var(--dqs-success)">${version}</span> is ready to install.</p>
+                <div class="dqs-modal-actions">
+                    <button class="dqs-btn secondary" id="dqs-update-later">Later</button>
+                    <button class="dqs-btn" id="dqs-update-now">Update Now</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        overlay.querySelector("#dqs-update-later").onclick = () => {
+            overlay.remove();
+            this.showUpdateIcon(version, code);
+        };
+
+        overlay.querySelector("#dqs-update-now").onclick = () => {
+            overlay.querySelector("#dqs-update-now").innerHTML = `<div class="dqs-spinner"></div> Updating...`;
+            this.performUpdate(code);
+        };
+    }
+
+    showUpdateIcon(version, code) {
+        if (document.getElementById("dqs-update-icon")) return;
+
+        const icon = document.createElement("div");
+        icon.id = "dqs-update-icon";
+        icon.className = "dqs-update-floater";
+        icon.title = `Update to v${version}`;
+        icon.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`;
+
+        icon.onclick = () => this.showUpdateModal(version, code);
+        document.body.appendChild(icon);
+    }
+
+    removeUpdateIcon() {
+        const icon = document.getElementById("dqs-update-icon");
+        if (icon) icon.remove();
+    }
+
+    performUpdate(code) {
+        try {
+            const fs = require("fs");
+            const path = require("path");
+            const fileName = "DiscordQuestSpoofer.plugin.js";
+            let pluginPath = "";
+            
+            if (typeof BdApi !== "undefined" && BdApi.Plugins && BdApi.Plugins.get(this.getName())) {
+                pluginPath = path.join(BdApi.Plugins.folder, fileName);
+            } else {
+                throw new Error("Could not determine plugin folder");
+            }
+
+            fs.writeFileSync(pluginPath, code);
+            this.log("Update installed! Reloading...", "success");
+            
+            setTimeout(() => {
+                if (BdApi.Plugins.reload) BdApi.Plugins.reload(this.getName());
+                else window.location.reload();
+            }, 1500);
+
+        } catch (e) {
+            console.error("Update failed", e);
+            this.log("Update failed! Check console.", "error");
+            document.getElementById("dqs-update-modal")?.remove();
+        }
+    }
+
+    checkChangelog() {
+        if (this.settings.lastVersion !== this.getVersion()) {
+            this.showChangelogModal();
+            this.settings.lastVersion = this.getVersion();
+            this.saveSettings();
+        }
+    }
+
+    showChangelogModal() {
+        if (document.getElementById("dqs-changelog-modal")) return;
+        const overlay = document.createElement("div");
+        overlay.id = "dqs-changelog-modal";
+        overlay.className = "dqs-overlay";
+        overlay.style.zIndex = "100000";
+
+        let changesHtml = this.changelog.changes.map(c => `
+            <div class="dqs-change-item">
+                <span class="dqs-tag ${c.type}">${c.type.toUpperCase()}</span>
+                <span>${c.text}</span>
+            </div>
+        `).join("");
+        
+        overlay.innerHTML = `
+            <div class="dqs-modal-box">
+                <h2 class="dqs-modal-title">What's New in v${this.changelog.version}</h2>
+                <div class="dqs-changelog-list">${changesHtml}</div>
+                <button class="dqs-btn" id="dqs-changelog-close" style="margin-top:20px;">Awesome!</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.querySelector("#dqs-changelog-close").onclick = () => overlay.remove();
+    }
+
+    // --- Core Modules (Synced with console.js for maximum reliability) ---
     findModules() {
         try {
+            // Method 1: Direct Webpack Chunk Access (Like console.js)
             let wpRequire = window.webpackChunkdiscord_app?.push([[Symbol()], {}, r => r]);
             window.webpackChunkdiscord_app?.pop();
 
             if (wpRequire) {
                 const modules = Object.values(wpRequire.c);
+                
                 this.modules.ApplicationStreamingStore = modules.find(x => x?.exports?.Z?.__proto__?.getStreamerActiveStreamMetadata)?.exports?.Z;
                 this.modules.RunningGameStore = modules.find(x => x?.exports?.ZP?.getRunningGames)?.exports?.ZP;
                 this.modules.QuestsStore = modules.find(x => x?.exports?.Z?.__proto__?.getQuest)?.exports?.Z;
@@ -168,8 +328,11 @@ module.exports = class DiscordQuestSpoofer {
                 this.modules.FluxDispatcher = modules.find(x => x?.exports?.Z?.__proto__?.flushWaitQueue)?.exports?.Z;
                 this.modules.API = modules.find(x => x?.exports?.tn?.get)?.exports?.tn;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error("DQS: Direct webpack access failed", e);
+        }
 
+        // Method 2: Fallback to BdApi
         if (!this.modules.QuestsStore && typeof BdApi !== "undefined" && BdApi.Webpack) {
             const get = BdApi.Webpack.getModule;
             this.modules.ApplicationStreamingStore = get(m => m?.getStreamerActiveStreamMetadata);
@@ -230,24 +393,17 @@ module.exports = class DiscordQuestSpoofer {
 
     toggleModal() {
         const existing = document.getElementById("dqs-overlay");
-        if (existing) {
-            this.closeModal();
-        } else {
-            this.openModal();
-        }
+        if (existing) this.closeModal();
+        else this.openModal();
     }
 
     closeModal() {
         const overlay = document.getElementById("dqs-overlay");
         if (overlay) {
             overlay.classList.add("dqs-closing");
-            setTimeout(() => {
-                if(overlay) overlay.remove();
-            }, 300);
+            setTimeout(() => { if(overlay) overlay.remove(); }, 300);
         }
-        if (this.currentQuestId) {
-            this.renderMiniPlayer();
-        }
+        if (this.currentQuestId) this.renderMiniPlayer();
     }
 
     openModal() {
@@ -257,10 +413,7 @@ module.exports = class DiscordQuestSpoofer {
         const overlay = document.createElement("div");
         overlay.id = "dqs-overlay";
         overlay.className = "dqs-overlay";
-        
-        overlay.onclick = (e) => {
-            if (e.target === overlay) this.closeModal();
-        };
+        overlay.onclick = (e) => { if (e.target === overlay) this.closeModal(); };
 
         const content = this.renderDashboard();
         overlay.appendChild(content);
@@ -282,6 +435,7 @@ module.exports = class DiscordQuestSpoofer {
         this.queue = [];
         this.currentQuestId = null;
 
+        // Restore Original Methods
         if (this.modules.RunningGameStore && this.originalGetRunningGames) {
             this.modules.RunningGameStore.getRunningGames = this.originalGetRunningGames;
             this.modules.RunningGameStore.getGameForPID = this.originalGetGameForPID;
@@ -321,93 +475,105 @@ module.exports = class DiscordQuestSpoofer {
         const css = `
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
             :root {
-                --dqs-bg-overlay: rgba(0, 0, 0, 0.85);
+                --dqs-bg-overlay: rgba(0, 0, 0, 0.9);
                 --dqs-bg-panel: #0a0a0c;
                 --dqs-bg-card: rgba(255, 255, 255, 0.03);
                 --dqs-border: rgba(255, 255, 255, 0.08);
-                --dqs-accent: #ff0055;
-                --dqs-accent-gradient: linear-gradient(135deg, #ff2a5d, #ff0055);
-                --dqs-accent-glow: rgba(255, 42, 93, 0.5);
-                --dqs-success: #00ff9d;
-                --dqs-success-glow: rgba(0, 255, 157, 0.4);
+                --dqs-accent: #ef4444;
+                --dqs-accent-gradient: linear-gradient(135deg, #ef4444, #ec4899);
+                --dqs-accent-glow: rgba(239, 68, 68, 0.5);
+                --dqs-success: #10b981;
+                --dqs-success-glow: rgba(16, 185, 129, 0.4);
                 --dqs-text-main: #ffffff;
-                --dqs-text-muted: #8a8a90;
+                --dqs-text-muted: #9ca3af;
                 --dqs-text-highlight: #ffffff;
             }
-            @keyframes dqsFadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(12px); } }
+            @keyframes dqsFadeIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(16px); } }
             @keyframes dqsScaleUp { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
             @keyframes dqsSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
             @keyframes dqsRainbow { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
             @keyframes dqsPulse { 0% { box-shadow: 0 0 0 0 var(--dqs-accent-glow); } 70% { box-shadow: 0 0 0 10px rgba(0,0,0,0); } 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); } }
+            @keyframes dqsSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            @keyframes dqsShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
             
-            /* Settings Panel CSS */
-            @keyframes dqsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-            @keyframes dqsNeonPulse { 0% { box-shadow: 0 0 5px rgba(0, 255, 157, 0.2), inset 0 0 5px rgba(0, 255, 157, 0.1); } 50% { box-shadow: 0 0 20px rgba(0, 255, 157, 0.5), inset 0 0 10px rgba(0, 255, 157, 0.2); } 100% { box-shadow: 0 0 5px rgba(0, 255, 157, 0.2), inset 0 0 5px rgba(0, 255, 157, 0.1); } }
+            /* Modal Box */
+            .dqs-modal-box { background: var(--dqs-bg-panel); border: 1px solid var(--dqs-border); border-radius: 20px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.5); animation: dqsScaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; position: relative; overflow: hidden; backdrop-filter: blur(10px); }
+            .dqs-modal-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--dqs-accent), transparent); }
+            .dqs-modal-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 10px; }
+            .dqs-modal-desc { color: var(--dqs-text-muted); font-size: 14px; margin-bottom: 30px; }
+            .dqs-modal-actions { display: flex; gap: 10px; justify-content: center; }
+            .dqs-update-icon { font-size: 40px; margin-bottom: 15px; display: inline-block; filter: drop-shadow(0 0 20px var(--dqs-accent)); }
             
-            .dqs-settings-wrapper { width: 100%; height: 100%; min-height: 300px; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle at center, rgba(0, 255, 157, 0.05) 0%, transparent 70%); font-family: 'Inter', system-ui, sans-serif; }
-            .dqs-settings-card { background: rgba(10, 20, 15, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(0, 255, 157, 0.3); padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 100%; position: relative; overflow: hidden; animation: dqsScaleUp 0.5s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-            .dqs-settings-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #00ff9d, transparent); }
-            .dqs-icon-large { font-size: 48px; margin-bottom: 20px; display: inline-block; animation: dqsFloat 3s ease-in-out infinite; filter: drop-shadow(0 0 15px rgba(0, 255, 157, 0.4)); }
-            .dqs-settings-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: -0.5px; }
-            .dqs-settings-desc { color: #8a8a90; font-size: 14px; margin-bottom: 32px; line-height: 1.5; font-weight: 500; }
-            .dqs-key-display { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-            .dqs-key { background: rgba(0, 255, 157, 0.05); border: 1px solid #00ff9d; color: #00ff9d; padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 18px; box-shadow: 0 0 15px rgba(0, 255, 157, 0.15); text-shadow: 0 0 10px rgba(0, 255, 157, 0.5); animation: dqsNeonPulse 3s infinite; }
-            .dqs-plus { color: #555; font-weight: 700; font-size: 20px; }
-            .dqs-instruction { font-size: 12px; font-weight: 700; color: #00ff9d; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.8; }
+            /* Floating Icon */
+            .dqs-update-floater { position: fixed; top: 32px; right: 150px; width: 32px; height: 32px; background: rgba(0,0,0,0.8); border: 1px solid var(--dqs-success); color: var(--dqs-success); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 99999; animation: dqsSlideUp 0.5s ease; box-shadow: 0 0 10px var(--dqs-success-glow); transition: all 0.2s; }
+            .dqs-update-floater:hover { background: var(--dqs-success-glow); transform: translateY(2px); }
+            
+            /* Changelog */
+            .dqs-changelog-list { text-align: left; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 15px; border: 1px solid var(--dqs-border); }
+            .dqs-changelog-list::-webkit-scrollbar { width: 4px; }
+            .dqs-changelog-list::-webkit-scrollbar-thumb { background: var(--dqs-accent); border-radius: 4px; }
+            .dqs-change-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; color: var(--dqs-text-main); }
+            .dqs-tag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+            .dqs-tag.new { background: rgba(16, 185, 129, 0.15); color: var(--dqs-success); border: 1px solid var(--dqs-success-glow); }
+            .dqs-tag.fix { background: rgba(255, 179, 0, 0.15); color: #ffb300; border: 1px solid rgba(255, 179, 0, 0.3); }
+            .dqs-tag.imp { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+            .dqs-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: dqsSpin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 5px; }
 
-            /* Recorder UI */
-            .dqs-recorder-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(15px); animation: dqsFadeIn 0.2s ease; }
-            .dqs-recorder-box { background: #0a0a0c; border: 1px solid var(--dqs-accent); border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 0 50px var(--dqs-accent-glow); transform: scale(0.9); animation: dqsScaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-            .dqs-rec-title { font-size: 20px; color: #fff; font-weight: 700; margin-bottom: 20px; }
-            .dqs-rec-keys { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; min-height: 50px; }
-            .dqs-rec-key { padding: 10px 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-weight: 600; color: var(--dqs-text-highlight); border: 1px solid rgba(255,255,255,0.2); }
-            .dqs-rec-anim { width: 10px; height: 10px; background: #ff0055; border-radius: 50%; margin: 0 auto 20px; animation: dqsPulse 1s infinite; }
-            .dqs-btn-outline { background: transparent; border: 1px solid var(--dqs-border); color: var(--dqs-text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 600; }
-            .dqs-btn-outline:hover { border-color: var(--dqs-accent); color: var(--dqs-text-highlight); }
-
-            /* Main UI styles */
-            .dqs-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--dqs-bg-overlay); z-index: 99999; display: flex; justify-content: center; align-items: center; animation: dqsFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; backdrop-filter: blur(12px); }
+            /* Main UI */
+            .dqs-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--dqs-bg-overlay); z-index: 99999; display: flex; justify-content: center; align-items: center; animation: dqsFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; backdrop-filter: blur(16px); }
             .dqs-overlay.dqs-closing { animation: dqsFadeIn 0.3s reverse forwards; }
-            .dqs-panel { width: 500px; max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column; background: var(--dqs-bg-panel); border: 1px solid var(--dqs-border); border-radius: 24px; font-family: 'Inter', system-ui, sans-serif; color: var(--dqs-text-main); box-shadow: 0 0 0 1px rgba(0,0,0,1), 0 40px 80px -20px rgba(0,0,0,0.8); animation: dqsScaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; position: relative; overflow: hidden; }
-            .dqs-content { position: relative; z-index: 2; padding: 32px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+            .dqs-panel { width: 500px; height: 600px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; background: var(--dqs-bg-panel); border: 1px solid var(--dqs-border); border-radius: 24px; font-family: 'Inter', system-ui, sans-serif; color: var(--dqs-text-main); box-shadow: 0 0 0 1px rgba(0,0,0,1), 0 40px 80px -20px rgba(0,0,0,0.8); animation: dqsScaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; position: relative; overflow: hidden; }
+            .dqs-content { position: relative; z-index: 2; padding: 32px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-sizing: border-box; }
+            
             .dqs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-shrink: 0; }
             .dqs-brand { display: flex; align-items: center; gap: 16px; }
-            .dqs-logo-box { width: 48px; height: 48px; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); border: 1px solid var(--dqs-border); border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px -5px rgba(0,0,0,0.5); }
+            .dqs-logo-box { width: 48px; height: 48px; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); border: 1px solid var(--dqs-border); border-radius: 14px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px -5px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+            .dqs-logo-box::after { content: ''; position: absolute; inset: 0; border-radius: 14px; box-shadow: inset 0 0 20px var(--dqs-accent-glow); opacity: 0.3; }
             .dqs-logo-box svg { stroke: var(--dqs-accent); filter: drop-shadow(0 0 8px var(--dqs-accent)); transition: stroke 0.3s; }
-            .dqs-title-wrap h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--dqs-text-main); }
-            .dqs-title-wrap p { margin: 0; font-size: 11px; font-weight: 600; color: var(--dqs-text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
-            .dqs-status-dot { width: 6px; height: 6px; background: var(--dqs-success); border-radius: 50%; box-shadow: 0 0 10px var(--dqs-success); }
+            
+            .dqs-title-wrap h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.5px; color: var(--dqs-text-main); background: var(--dqs-accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .dqs-title-wrap p { margin: 0; font-size: 11px; font-weight: 700; color: var(--dqs-text-muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+            .dqs-status-dot { width: 6px; height: 6px; background: var(--dqs-success); border-radius: 50%; box-shadow: 0 0 10px var(--dqs-success); animation: dqsPulse 2s infinite; }
+            
             .dqs-controls { display: flex; gap: 8px; }
             .dqs-icon-btn { background: rgba(255,255,255,0.03); border: 1px solid transparent; color: var(--dqs-text-muted); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
             .dqs-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateY(-2px); }
             .dqs-close-btn:hover { background: var(--dqs-accent); border-color: var(--dqs-accent); box-shadow: 0 4px 15px var(--dqs-accent-glow); }
+            
             #dqs-list { flex-grow: 1; overflow-y: auto; padding-right: 8px; margin-right: -8px; }
             #dqs-list::-webkit-scrollbar { width: 4px; }
             #dqs-list::-webkit-scrollbar-track { background: transparent; }
             #dqs-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-            .dqs-card { background: var(--dqs-bg-card); border: 1px solid var(--dqs-border); border-radius: 18px; padding: 24px; margin-bottom: 16px; position: relative; transition: all 0.3s; opacity: 0; animation: dqsScaleUp 0.5s forwards; }
+            
+            .dqs-card { background: var(--dqs-bg-card); border: 1px solid var(--dqs-border); border-radius: 18px; padding: 24px; margin-bottom: 16px; position: relative; transition: all 0.3s; opacity: 0; animation: dqsScaleUp 0.5s forwards; overflow: hidden; }
             .dqs-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
-            .dqs-card.error { border-color: #ff3333; box-shadow: 0 0 20px rgba(255,51,51,0.2); }
+            .dqs-card.running { border-color: var(--dqs-accent); box-shadow: 0 10px 30px -10px var(--dqs-accent-glow); }
+            .dqs-card.completed { border-color: var(--dqs-success); box-shadow: 0 10px 30px -10px var(--dqs-success-glow); }
+            
             .dqs-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-            .dqs-app-icon { width: 40px; height: 40px; border-radius: 10px; background: #222; margin-right: 12px; }
+            .dqs-app-icon { width: 40px; height: 40px; border-radius: 10px; background: #222; margin-right: 12px; border: 1px solid var(--dqs-border); }
             .dqs-app-name { font-size: 16px; font-weight: 700; color: var(--dqs-text-highlight); }
             .dqs-task-name { font-size: 12px; color: var(--dqs-text-muted); margin-top: 2px; }
             .dqs-badge { font-size: 10px; font-weight: 800; padding: 6px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255,255,255,0.05); color: var(--dqs-text-muted); border: 1px solid rgba(255,255,255,0.1); }
-            .dqs-card.completed .dqs-badge { background: rgba(0, 255, 157, 0.1); color: #00ff9d; border-color: rgba(0, 255, 157, 0.2); }
-            .dqs-card.running .dqs-badge { background: rgba(255, 42, 93, 0.1); color: var(--dqs-accent); border-color: var(--dqs-accent); }
-            .dqs-card.queued .dqs-badge { background: rgba(255, 179, 0, 0.1); color: #ffb300; border-color: #ffb300; }
-            .dqs-progress-track { height: 6px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; margin-bottom: 20px; }
-            .dqs-progress-fill { height: 100%; background: var(--dqs-accent-gradient); width: 0%; box-shadow: 0 0 15px var(--dqs-accent-glow); transition: width 0.3s linear; }
+            .dqs-card.completed .dqs-badge { background: rgba(16, 185, 129, 0.1); color: var(--dqs-success); border-color: rgba(16, 185, 129, 0.2); }
+            .dqs-card.running .dqs-badge { background: rgba(239, 68, 68, 0.1); color: var(--dqs-accent); border-color: var(--dqs-accent); }
+            
+            .dqs-progress-track { height: 6px; background: rgba(255,255,255,0.05); border-radius: 100px; overflow: hidden; margin-bottom: 20px; position: relative; }
+            .dqs-progress-fill { height: 100%; background: var(--dqs-accent-gradient); width: 0%; box-shadow: 0 0 15px var(--dqs-accent-glow); transition: width 0.3s linear; position: relative; }
+            .dqs-progress-fill::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); transform: translateX(-100%); animation: dqsShimmer 2s infinite; }
             .dqs-card.completed .dqs-progress-fill { background: var(--dqs-success); box-shadow: 0 0 15px var(--dqs-success-glow); }
+            
             .dqs-stats { display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 12px; font-weight: 600; color: var(--dqs-text-muted); }
             .dqs-stat-val { color: var(--dqs-text-highlight); margin-left: 4px; }
-            .dqs-btn { width: 100%; padding: 12px; background: var(--dqs-accent-gradient); border: none; color: #fff; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 20px var(--dqs-accent-glow); }
+            
+            .dqs-btn { width: 100%; padding: 12px; background: var(--dqs-accent-gradient); border: none; color: #fff; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px; border-radius: 12px; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 20px var(--dqs-accent-glow); position: relative; overflow: hidden; }
             .dqs-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px var(--dqs-accent-glow); }
             .dqs-btn.active { animation: dqsPulse 2s infinite; }
-            .dqs-btn.secondary { background: rgba(255,255,255,0.1); box-shadow: none; }
-            .dqs-btn.secondary:hover { background: rgba(255,255,255,0.15); }
+            .dqs-btn.secondary { background: rgba(255,255,255,0.1); box-shadow: none; color: var(--dqs-text-muted); }
+            .dqs-btn.secondary:hover { background: rgba(255,255,255,0.15); color: #fff; }
             .dqs-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-            .dqs-mini { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 400px; padding: 16px; border-radius: 16px; background: var(--dqs-bg-panel); border: 1px solid var(--dqs-border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 99990; display: flex; align-items: center; gap: 16px; animation: dqsSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+            .dqs-mini { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 400px; padding: 16px; border-radius: 16px; background: var(--dqs-bg-panel); border: 1px solid var(--dqs-border); box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 99990; display: flex; align-items: center; gap: 16px; animation: dqsSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); backdrop-filter: blur(10px); }
             .dqs-mini-icon { width: 32px; height: 32px; border-radius: 8px; background: #222; }
             .dqs-mini-info { flex: 1; }
             .dqs-mini-title { font-size: 12px; font-weight: 700; color: var(--dqs-text-highlight); margin-bottom: 4px; }
@@ -416,6 +582,7 @@ module.exports = class DiscordQuestSpoofer {
             .dqs-mini-eta { font-size: 10px; color: var(--dqs-text-muted); margin-left: 8px; min-width: 50px; text-align: right; }
             .dqs-mini-close { width: 24px; height: 24px; border-radius: 6px; border: none; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
             .dqs-mini-close:hover { background: #ff3333; }
+            
             .dqs-settings-overlay { position: absolute; inset: 0; background: var(--dqs-bg-panel); z-index: 10; padding: 32px; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             .dqs-settings-overlay.open { transform: translateX(0); }
             .dqs-setting-row { margin-bottom: 20px; }
@@ -425,6 +592,33 @@ module.exports = class DiscordQuestSpoofer {
             .dqs-theme-btn:hover { background: rgba(255,255,255,0.05); }
             .dqs-theme-btn.active { border-color: var(--dqs-accent); color: var(--dqs-accent); background: rgba(255,255,255,0.05); }
             .dqs-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--dqs-text-main); font-size: 13px; font-weight: 500; }
+
+            .dqs-settings-wrapper { width: 100%; height: 100%; min-height: 300px; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle at center, rgba(239, 68, 68, 0.05) 0%, transparent 70%); font-family: 'Inter', system-ui, sans-serif; }
+            .dqs-settings-card { background: rgba(10, 20, 15, 0.8); backdrop-filter: blur(10px); border: 1px solid var(--dqs-border); padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 100%; position: relative; overflow: hidden; animation: dqsScaleUp 0.5s ease; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+            .dqs-settings-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--dqs-accent), transparent); }
+            .dqs-icon-large { font-size: 48px; margin-bottom: 20px; display: inline-block; animation: dqsFloat 3s ease-in-out infinite; filter: drop-shadow(0 0 15px var(--dqs-accent-glow)); }
+            .dqs-settings-title { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; text-transform: uppercase; letter-spacing: -0.5px; }
+            .dqs-settings-desc { color: #8a8a90; font-size: 14px; margin-bottom: 32px; line-height: 1.5; font-weight: 500; }
+            .dqs-key-display { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+            .dqs-key { background: rgba(255,255,255,0.05); border: 1px solid var(--dqs-accent); color: var(--dqs-accent); padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 18px; box-shadow: 0 0 15px var(--dqs-accent-glow); text-shadow: 0 0 10px var(--dqs-accent-glow); animation: dqsPulse 3s infinite; }
+            .dqs-plus { color: #555; font-weight: 700; font-size: 20px; }
+            .dqs-instruction { font-size: 12px; font-weight: 700; color: var(--dqs-accent); letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.8; }
+            .dqs-btn-outline { background: transparent; border: 1px solid var(--dqs-border); color: var(--dqs-text-muted); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 600; }
+            .dqs-btn-outline:hover { border-color: var(--dqs-accent); color: var(--dqs-text-highlight); }
+            
+            /* Empty State */
+            .dqs-empty-state { text-align: center; padding: 20px; animation: dqsFadeIn 0.5s; }
+            .dqs-empty-icon { font-size: 48px; margin-bottom: 15px; display: inline-block; filter: drop-shadow(0 0 15px var(--dqs-accent-glow)); }
+            
+            /* Recorder UI */
+            .dqs-recorder-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(15px); animation: dqsFadeIn 0.2s ease; }
+            .dqs-recorder-box { background: #0a0a0c; border: 1px solid var(--dqs-accent); border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 0 50px var(--dqs-accent-glow); transform: scale(0.9); animation: dqsScaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+            .dqs-rec-title { font-size: 20px; color: #fff; font-weight: 700; margin-bottom: 20px; }
+            .dqs-rec-keys { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; min-height: 50px; }
+            .dqs-rec-key { padding: 10px 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-weight: 600; color: var(--dqs-text-highlight); border: 1px solid rgba(255,255,255,0.2); }
+            .dqs-rec-anim { width: 10px; height: 10px; background: var(--dqs-accent); border-radius: 50%; margin: 0 auto 20px; animation: dqsPulse 1s infinite; }
+            
+            @keyframes dqsFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         `;
         if (typeof BdApi !== "undefined" && BdApi.DOM) BdApi.DOM.addStyle("DiscordQuestSpoofer", css);
     }
@@ -442,13 +636,28 @@ module.exports = class DiscordQuestSpoofer {
 
         wrap.innerHTML = `
             <div class="dqs-settings-card">
-                <div class="dqs-icon-large">⚙️</div>
+                <div class="dqs-icon-large">⚡</div>
                 <h2 class="dqs-settings-title">Quest Spoofer Ready</h2>
                 <p class="dqs-settings-desc">The main interface is hidden to keep your workspace clean and professional.</p>
                 <div class="dqs-key-display">${keysHtml}</div>
                 <p class="dqs-instruction">Press shortcut anywhere to open</p>
+                <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+                    <button class="dqs-btn-outline" id="dqs-btn-whatsnew">What's New</button>
+                    <button class="dqs-btn-outline" id="dqs-btn-updatecheck">Check Updates</button>
+                </div>
             </div>
         `;
+
+        setTimeout(() => {
+            const btnNew = wrap.querySelector("#dqs-btn-whatsnew");
+            const btnUpdate = wrap.querySelector("#dqs-btn-updatecheck");
+            if(btnNew) btnNew.onclick = () => this.showChangelogModal();
+            if(btnUpdate) btnUpdate.onclick = () => {
+                this.log("Checking for updates...", "info");
+                this.checkForUpdates();
+            };
+        }, 100);
+
         return wrap;
     }
 
@@ -471,8 +680,6 @@ module.exports = class DiscordQuestSpoofer {
         const handler = (e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            // Ignore standalone modifiers
             if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
 
             const newBind = {
@@ -486,11 +693,8 @@ module.exports = class DiscordQuestSpoofer {
             this.settings.keybind = newBind;
             this.saveSettings();
             
-            // Clean up
             document.removeEventListener("keydown", handler);
             overlay.remove();
-            
-            // Refresh UIs
             this.closeModal();
             this.openModal();
             const panel = document.getElementById("dqs-settings-panel");
@@ -498,7 +702,6 @@ module.exports = class DiscordQuestSpoofer {
         };
 
         document.addEventListener("keydown", handler);
-
         overlay.querySelector("#dqs-rec-cancel").onclick = () => {
             document.removeEventListener("keydown", handler);
             overlay.remove();
@@ -507,6 +710,7 @@ module.exports = class DiscordQuestSpoofer {
 
     renderDashboard() {
         const self = this;
+        // Ensure modules are found before rendering
         if (!self.modules.QuestsStore) self.findModules();
 
         const container = document.createElement("div");
@@ -523,7 +727,7 @@ module.exports = class DiscordQuestSpoofer {
                         </div>
                         <div class="dqs-title-wrap">
                             <h1>Quest Spoofer</h1>
-                            <p><span class="dqs-status-dot"></span> V3.2 • READY</p>
+                            <p><span class="dqs-status-dot"></span> V${this.getVersion()} • READY</p>
                         </div>
                     </div>
                     <div class="dqs-controls">
@@ -565,6 +769,10 @@ module.exports = class DiscordQuestSpoofer {
                             <input type="checkbox" id="dqs-chk-notify" ${this.settings.notifications ? 'checked' : ''}> Desktop Notifications
                         </label>
                     </div>
+                    
+                    <div class="dqs-setting-row" style="margin-top: auto; border-top: 1px solid var(--dqs-border); padding-top: 15px;">
+                        <button class="dqs-btn secondary" id="dqs-show-changelog">What's New in v${this.getVersion()}</button>
+                    </div>
                 </div>
 
                 <div id="dqs-list"></div>
@@ -577,6 +785,7 @@ module.exports = class DiscordQuestSpoofer {
 
         container.querySelector("#dqs-close").onclick = () => this.closeModal();
         container.querySelector("#dqs-change-key").onclick = () => this.openKeybindRecorder();
+        container.querySelector("#dqs-show-changelog").onclick = () => this.showChangelogModal();
         
         const settingsPanel = container.querySelector("#dqs-settings-panel");
         container.querySelector("#dqs-settings-btn").onclick = () => settingsPanel.classList.add("open");
@@ -609,13 +818,29 @@ module.exports = class DiscordQuestSpoofer {
         list.innerHTML = "";
 
         if (!this.modules.QuestsStore) {
-            list.innerHTML = `<div style="padding:40px; text-align:center; color:var(--dqs-text-muted)">Modules not loaded.<br>Restart Discord.</div>`;
+            list.innerHTML = `<div style="padding:40px; text-align:center; color:var(--dqs-text-muted)">Core modules not loaded.<br>Attempting to reload...</div>`;
+            this.findModules();
             return;
         }
 
         const quests = this.getQuests();
         if (quests.length === 0) {
-            list.innerHTML = `<div style="padding:40px; text-align:center; color:var(--dqs-text-muted); border:1px dashed var(--dqs-border); border-radius:12px;">No active quests found.<br>Accept one in User Settings.</div>`;
+            list.innerHTML = `
+                <div class="dqs-empty-state">
+                    <div class="dqs-empty-icon">🎁</div>
+                    <h3 style="color:white; margin-bottom:10px;">No Active Quests</h3>
+                    <p style="color:var(--dqs-text-muted); font-size:13px; margin-bottom:20px;">
+                        You must <b>Enroll</b> in a quest to spoof it.
+                    </p>
+                    <div style="text-align:left; background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; border:1px solid var(--dqs-border);">
+                        <div style="margin-bottom:8px; font-size:13px;">1. Open <b>User Settings</b> <span style="opacity:0.7">⚙️</span></div>
+                        <div style="margin-bottom:8px; font-size:13px;">2. Select <b>Gift Inventory</b> <span style="opacity:0.7">🎁</span></div>
+                        <div style="font-size:13px;">3. Click <b>Accept Quest</b></div>
+                    </div>
+                    <button class="dqs-btn secondary" id="dqs-refresh-btn" style="margin-top:20px;">I Accepted it, Refresh!</button>
+                </div>
+            `;
+            list.querySelector("#dqs-refresh-btn").onclick = () => this.renderQuestsList(list);
             return;
         }
 
@@ -677,7 +902,6 @@ module.exports = class DiscordQuestSpoofer {
                 btn.onclick = () => {
                     if (this.currentQuestId === quest.id) {
                         this.stopSpoof(quest.id);
-                        // Do not auto-process queue if manually stopped by user
                     } else if (this.queue.includes(quest.id)) {
                         this.queue = this.queue.filter(id => id !== quest.id);
                         this.updateCardUI(quest.id, false, false, currentProgress, targetSeconds);
@@ -723,9 +947,7 @@ module.exports = class DiscordQuestSpoofer {
         `;
 
         mini.onclick = (e) => {
-            if (e.target.tagName !== 'BUTTON') {
-                this.toggleModal();
-            }
+            if (e.target.tagName !== 'BUTTON') this.toggleModal();
         };
         mini.querySelector("button").onclick = () => this.toggleModal();
 
@@ -791,8 +1013,10 @@ module.exports = class DiscordQuestSpoofer {
         if (quest) {
             this.queue.forEach(qid => {
                 const q = this.getQuests().find(x => x.id === qid);
-                const t = q.config.taskConfig?.tasks ? Object.values(q.config.taskConfig.tasks)[0].target : 100;
-                this.updateCardUI(qid, false, true, q.userStatus?.progress ? Object.values(q.userStatus.progress)[0].value : 0, t);
+                if (q) {
+                    const t = q.config.taskConfig?.tasks ? Object.values(q.config.taskConfig.tasks)[0].target : 100;
+                    this.updateCardUI(qid, false, true, q.userStatus?.progress ? Object.values(q.userStatus.progress)[0].value : 0, t);
+                }
             });
 
             const taskConfig = quest.config.taskConfig ?? quest.config.taskConfigV2;
@@ -806,18 +1030,30 @@ module.exports = class DiscordQuestSpoofer {
         try {
             const collection = this.modules.QuestsStore.quests;
             const allQuests = (collection instanceof Map) ? Array.from(collection.values()) : Object.values(collection);
-            return allQuests.filter(x => 
-                x.id !== "1412491570820812933" && 
-                x.userStatus?.enrolledAt && 
-                !x.userStatus?.completedAt && 
-                new Date(x.config.expiresAt).getTime() > Date.now()
-            );
+            return allQuests.filter(x => {
+                const isActive = x.id !== "1412491570820812933" &&
+                    x.userStatus?.enrolledAt &&
+                    !x.userStatus?.completedAt &&
+                    new Date(x.config.expiresAt).getTime() > Date.now();
+                
+                if (!isActive) return false;
+
+                // Validation for rendering: Must have a known task
+                // This prevents the blank panel issue where a quest is active but unrenderable
+                const taskConfig = x.config.taskConfig ?? x.config.taskConfigV2;
+                if (!taskConfig || !taskConfig.tasks) return false;
+                
+                const taskName = ["WATCH_VIDEO", "PLAY_ON_DESKTOP", "STREAM_ON_DESKTOP", "PLAY_ACTIVITY", "WATCH_VIDEO_ON_MOBILE"].find(t => taskConfig.tasks[t] != null);
+                return !!taskName;
+            });
         } catch(e) { return []; }
     }
 
     stopSpoof(questId) {
         if (this.activeSpoofs.has(questId)) {
-            this.activeSpoofs.get(questId)();
+            const cleaner = this.activeSpoofs.get(questId);
+            if(cleaner.isRunning) cleaner.stop = true; // For async loops
+            else cleaner(); // For intervals/immediate cleanup
             this.activeSpoofs.delete(questId);
         }
         if (this.currentQuestId === questId) {
@@ -843,11 +1079,11 @@ module.exports = class DiscordQuestSpoofer {
     }
 
     async startSpoof(quest, taskName, secondsNeeded) {
-        if (this.currentQuestId) return; // Prevent concurrent
+        if (this.currentQuestId) return; 
         this.currentQuestId = quest.id;
         this.updateCardUI(quest.id, true, false, 0, secondsNeeded);
 
-        const { API, RunningGameStore, FluxDispatcher, ApplicationStreamingStore } = this.modules;
+        const { API, RunningGameStore, FluxDispatcher, ApplicationStreamingStore, ChannelStore, GuildChannelStore } = this.modules;
         
         const onProgress = (current) => {
             this.updateCardUI(quest.id, true, false, current, secondsNeeded);
@@ -855,30 +1091,64 @@ module.exports = class DiscordQuestSpoofer {
                 this.stopSpoof(quest.id);
                 this.playSound();
                 this.notify("Quest Completed!", `You finished ${quest.config.application.name}`);
-                this.processQueue(); // Auto-start next
+                this.processQueue(); 
             }
         };
 
-        // --- Video Tasks ---
+        // --- Video Tasks (Updated Logic to match console.js strictly) ---
         if (taskName === "WATCH_VIDEO" || taskName === "WATCH_VIDEO_ON_MOBILE") {
+            const maxFuture = 10;
             const speed = 7;
+            const enrolledAt = new Date(quest.userStatus.enrolledAt).getTime();
             let secondsDone = quest.userStatus?.progress?.[taskName]?.value ?? 0;
             
-            const interval = setInterval(async () => {
-                const timestamp = secondsDone + speed;
-                try {
-                    await API.post({
-                        url: `/quests/${quest.id}/video-progress`, 
-                        body: {timestamp: Math.min(secondsNeeded, timestamp + Math.random())}
-                    });
-                    secondsDone = Math.min(secondsNeeded, timestamp);
-                    onProgress(secondsDone);
-                } catch(e) {}
-            }, 1000);
-            this.activeSpoofs.set(quest.id, () => clearInterval(interval));
+            const state = { stop: false, isRunning: true };
+            
+            const runVideoLoop = async () => {
+                while (!state.stop) {
+                    const maxAllowed = Math.floor((Date.now() - enrolledAt)/1000) + maxFuture;
+                    const diff = maxAllowed - secondsDone;
+                    const timestamp = secondsDone + speed;
+                    
+                    if (diff >= speed) {
+                        try {
+                            const res = await API.post({
+                                url: `/quests/${quest.id}/video-progress`, 
+                                body: {timestamp: Math.min(secondsNeeded, timestamp + Math.random())}
+                            });
+                            // Verify completion from response
+                            if (res.body.completed_at != null) {
+                                state.stop = true;
+                                onProgress(secondsNeeded);
+                                break;
+                            }
+                            secondsDone = Math.min(secondsNeeded, timestamp);
+                            onProgress(secondsDone);
+                        } catch(e) {
+                            console.error("[DQS] Video API Error:", e);
+                        }
+                    }
+
+                    if (timestamp >= secondsNeeded) {
+                        // Final safety push
+                        try {
+                             await API.post({url: `/quests/${quest.id}/video-progress`, body: {timestamp: secondsNeeded}});
+                        } catch(e) {}
+                        onProgress(secondsNeeded);
+                        state.stop = true;
+                        break;
+                    }
+                    
+                    // Wait 1 second (console.js logic)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            };
+            
+            runVideoLoop();
+            this.activeSpoofs.set(quest.id, state);
         }
         
-        // --- Game Tasks ---
+        // --- Game Tasks (Updated for reliability) ---
         else if (taskName === "PLAY_ON_DESKTOP") {
             const pid = Math.floor(Math.random() * 30000) + 1000;
             const appId = quest.config.application.id;
@@ -889,7 +1159,7 @@ module.exports = class DiscordQuestSpoofer {
                 const res = await API.get({url: `/applications/public?application_ids=${appId}`});
                 if (res.body?.[0]?.executables) {
                     const winExe = res.body[0].executables.find(x => x.os === "win32");
-                    if (winExe) exeName = winExe.name.replace(">","");
+                    if (winExe) exeName = winExe.name.replace(">",""); // sanitize like console.js
                 }
             } catch(e) {}
 
@@ -966,43 +1236,46 @@ module.exports = class DiscordQuestSpoofer {
             });
         }
         
-        // --- Activity Tasks ---
+        // --- Activity Tasks (Logic matched with console.js) ---
         else if (taskName === "PLAY_ACTIVITY") {
-            const { ChannelStore, GuildChannelStore } = this.modules;
-            if (!ChannelStore || !GuildChannelStore) {
-                this.notify("Error", "Modules for Activity spoofing not found.");
-                this.stopSpoof(quest.id);
-                return;
-            }
-
+            // Find channel exactly like console.js
             const voiceChannel = ChannelStore.getSortedPrivateChannels()?.[0] 
                 ?? Object.values(GuildChannelStore.getAllGuilds?.() || {}).find(g => g?.VOCAL?.length > 0)?.VOCAL?.[0]?.channel;
 
             if (!voiceChannel) {
-                this.notify("Error", "Please join a server/DM with voice channels to use this feature.");
+                this.notify("Error", "No voice channel found. Join a DM or Server with voice channels.");
                 this.stopSpoof(quest.id);
                 return;
             }
 
             const streamKey = `call:${voiceChannel.id}:1`;
-            const heartbeat = async () => {
-                try {
-                    const res = await API.post({
-                        url: `/quests/${quest.id}/heartbeat`, 
-                        body: {stream_key: streamKey, terminal: false}
-                    });
-                    const progress = res.body?.progress?.PLAY_ACTIVITY?.value ?? 0;
-                    onProgress(progress);
-                } catch(e) {}
+            const state = { stop: false, isRunning: true };
+
+            const runActivityLoop = async () => {
+                while (!state.stop) {
+                    try {
+                        const res = await API.post({
+                            url: `/quests/${quest.id}/heartbeat`, 
+                            body: {stream_key: streamKey, terminal: false}
+                        });
+                        const progress = res.body?.progress?.PLAY_ACTIVITY?.value ?? 0;
+                        onProgress(progress);
+                        
+                        if (progress >= secondsNeeded) {
+                            await API.post({url: `/quests/${quest.id}/heartbeat`, body: {stream_key: streamKey, terminal: true}});
+                            state.stop = true;
+                            break;
+                        }
+                    } catch(e) {
+                        console.error("[DQS] Activity Heartbeat Failed", e);
+                    }
+                    // Wait 20 seconds (console.js logic)
+                    await new Promise(resolve => setTimeout(resolve, 20 * 1000));
+                }
             };
 
-            heartbeat();
-            const timer = setInterval(heartbeat, 20000);
-            
-            this.activeSpoofs.set(quest.id, () => {
-                clearInterval(timer);
-                API.post({url: `/quests/${quest.id}/heartbeat`, body: {stream_key: streamKey, terminal: true}}).catch(()=>{});
-            });
+            runActivityLoop();
+            this.activeSpoofs.set(quest.id, state);
         }
     }
 }
