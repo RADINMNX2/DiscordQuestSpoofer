@@ -3,7 +3,7 @@
 # 🎮 Discord Quest Spoofer
 ### The Ultimate Quest Completion Tool
 
-![Version](https://img.shields.io/badge/Version-3.1.0-ff0055?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-3.7.0-ff0055?style=for-the-badge)
 **Unlock Discord Quest rewards, Nitro offers, and Avatar Decorations instantly without installing any games.**
 <br>
 A powerful, beautiful, and safe plugin for **BetterDiscord** and **Vencord**.
